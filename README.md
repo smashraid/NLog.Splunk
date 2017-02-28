@@ -13,6 +13,9 @@ Use the GUI or the following command in the Package Manager Console
 
     Install-Package NLog.Splunk
 
+Then add it to your solution
+
+    ConfigurationItemFactory.Default.Targets.RegisterDefinition("Splunk", typeof(SplunkTarget));
 
 ----------
 

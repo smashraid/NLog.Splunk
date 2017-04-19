@@ -42,7 +42,7 @@ namespace NLog.Splunk
             JObject json = new JObject();
             json["Timestamp"] = item.TimeStamp;
             json["Level"] = item.Level.Name.ToUpper();
-            json["Message"] = item.Message;
+            json["Message"] = item.FormattedMessage;
             if (item.Exception != null)
             {
                 json["Exception"] = new JObject();

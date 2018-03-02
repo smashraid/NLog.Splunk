@@ -37,23 +37,27 @@ namespace NLog.Splunk
 
         private string BuildLog(LogEventInfo item)
         {
-            JObject json = new JObject();
-            json["Timestamp"] = item.TimeStamp;
-            json["Level"] = item.Level.Name.ToUpper();
-            json["Message"] = item.FormattedMessage;
+            JObject json = new JObject
+            {
+                ["Timestamp"] = item.TimeStamp,
+                ["Level"] = item.Level.Name.ToUpper(),
+                ["Message"] = item.FormattedMessage
+            };
             if (item.Exception != null)
             {
-                json["Exception"] = new JObject();
-                json["Exception"]["Message"] = item.Exception.Message;
-                json["Exception"]["StackTrace"] = item.Exception.StackTrace;
+                json["Exception"] = new JObject
+                {
+                    ["Message"] = item.Exception.Message,
+                    ["StackTrace"] = item.Exception.StackTrace
+                };
             }
             if (item.Properties.Count > 0)
             {
                 foreach (KeyValuePair<object, object> keyValuePair in item.Properties)
                 {
-                    string[] key = keyValuePair.Key.ToString().Split('.');
-                    if (key.Length > 1)
+                    if (keyValuePair.Key.ToString().Contains("."))
                     {
+                        string[] key = keyValuePair.Key.ToString().Split('.');
                         if (json[key[0]] == null)
                         {
                             json[key[0]] = new JObject();
@@ -66,7 +70,6 @@ namespace NLog.Splunk
                     }
                 }
             }
-
             return json.ToString(Formatting.None);
         }
 

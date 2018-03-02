@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>NLog.Splunk</id>
-    <version>$version$</version>
+    <version>1.0.1</version>
     <title>$title$</title>
     <authors>Saulo Tsuchida</authors>
     <owners>Saulo Tsuchida</owners>

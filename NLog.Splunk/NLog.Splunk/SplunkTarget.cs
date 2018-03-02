@@ -1,17 +1,13 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using NLog;
 using NLog.Common;
 using NLog.Config;
 using NLog.Targets;
 using System;
 using System.Collections.Generic;
-using System.Configuration;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace NLog.Splunk
 {
@@ -20,7 +16,7 @@ namespace NLog.Splunk
     {
         [RequiredParameter]
         public string Host { get; set; }
-        [RequiredParameter]        
+        [RequiredParameter]
         public string Username { get; set; }
         [RequiredParameter]
         public string Password { get; set; }
@@ -30,6 +26,8 @@ namespace NLog.Splunk
         public string Source { get; set; }
         [RequiredParameter]
         public string SourceType { get; set; }
+
+        private static readonly HttpClient Client = new HttpClient();
 
         protected override void Write(LogEventInfo logEvent)
         {
@@ -74,31 +72,42 @@ namespace NLog.Splunk
 
         protected override void Write(AsyncLogEventInfo[] logEvents)
         {
-            StringBuilder builder = new StringBuilder();
-
-            foreach (AsyncLogEventInfo item in logEvents)
+            try
             {
-                string json = BuildLog(item.LogEvent);
-                builder.Append(json);
-                builder.AppendLine();
+                StringBuilder builder = new StringBuilder();
+
+                foreach (AsyncLogEventInfo item in logEvents)
+                {
+                    string json = BuildLog(item.LogEvent);
+                    builder.Append(json);
+                    builder.AppendLine();
+                }
+                this.WriteLogMessage(builder.ToString());
             }
-            this.WriteLogMessage(builder.ToString());
+            catch (Exception ex)
+            {
+                foreach (AsyncLogEventInfo logEventInfo in logEvents)
+                {
+                    logEventInfo.Continuation(ex);
+                }
+            }
+            foreach (AsyncLogEventInfo logEventInfo in logEvents)
+            {
+                logEventInfo.Continuation(null);
+            }
         }
 
         private void WriteLogMessage(string builder)
-        {           
-            ServicePointManager.ServerCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) => true;         
-            
-            using (var client = new HttpClient())
-            {               
-                string url = $"{Host}/services/receivers/stream?source={Source}&sourcetype={SourceType}&index={Index}";
-                var byteArray = Encoding.ASCII.GetBytes(string.Format("{0}:{1}", Username, Password));
-                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
-                var response = client.PostAsync(url, new StringContent(builder, Encoding.UTF8, "application/x-www-form-urlencoded")).Result;
-                if (response.IsSuccessStatusCode)
-                {
-                    var result = response.Content.ReadAsStringAsync().Result;
-                }
+        {
+            ServicePointManager.ServerCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) => true;
+
+            string url = $"{Host}/services/receivers/stream?source={Source}&sourcetype={SourceType}&index={Index}";
+            var byteArray = Encoding.ASCII.GetBytes(string.Format("{0}:{1}", Username, Password));
+            Client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
+            var response = Client.PostAsync(url, new StringContent(builder, Encoding.UTF8, "application/x-www-form-urlencoded")).Result;
+            if (response.IsSuccessStatusCode)
+            {
+                var result = response.Content.ReadAsStringAsync().Result;
             }
         }
     }
